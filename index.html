@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nike Sports Agent</title>
+
+    <!-- ArcGIS CSS -->
+    <link rel="stylesheet" href="https://js.arcgis.com/4.33/esri/themes/dark/main.css" />
+    <!-- Calcite Components -->
+    <script src="https://js.arcgis.com/calcite-components/3.3.0/calcite.esm.js" type="module"></script>
+    <!-- ArcGIS JS API (AMD) -->
+    <script src="https://js.arcgis.com/4.33/"></script>
+    <!-- Marked.js for Markdown rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      html, body { height: 100%; overflow: hidden; font-family: sans-serif; }
+
+      /* ===== LAYOUT ===== */
+      .app-container {
+        display: flex;
+        height: 100vh;
+        background: #1a1a1a;
+      }
+
+      /* ===== CHAT PANEL ===== */
+      .chat-panel {
+        width: 380px;
+        min-width: 280px;
+        max-width: 600px;
+        display: flex;
+        flex-direction: column;
+        background: var(--calcite-color-background, #1a1a1a);
+        border-right: 1px solid #333;
+        flex-shrink: 0;
+      }
+      .chat-header { flex-shrink: 0; }
+      .chat-body {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        padding: 8px;
+        gap: 8px;
+      }
+      .chat-log {
+        flex: 1;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        padding: 4px;
+      }
+
+      /* ===== CHAT MESSAGES ===== */
+      .chat-message {
+        padding: 10px 14px;
+        border-radius: 8px;
+        font-size: 14px;
+        line-height: 1.5;
+        max-width: 95%;
+        word-wrap: break-word;
+      }
+      .chat-message.user {
+        background: #007bff;
+        color: #fff;
+        align-self: flex-end;
+        border-radius: 8px 8px 2px 8px;
+      }
+      .chat-message.assistant {
+        background: #2a2a2a;
+        color: #e8e8e8;
+        align-self: flex-start;
+        border-radius: 8px 8px 8px 2px;
+      }
+      .chat-message table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 8px;
+        font-size: 12px;
+      }
+      .chat-message th, .chat-message td {
+        border: 1px solid #444;
+        padding: 4px 8px;
+        text-align: left;
+      }
+      .chat-message th { background: #333; font-weight: 600; }
+      .chat-message p { margin-bottom: 6px; }
+      .chat-message ul, .chat-message ol { padding-left: 18px; }
+      .chat-message code {
+        background: #333;
+        padding: 2px 5px;
+        border-radius: 3px;
+        font-size: 12px;
+      }
+
+      /* ===== INPUT AREA ===== */
+      .chat-input-area {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        flex-shrink: 0;
+      }
+      .chat-buttons {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+      }
+
+      /* ===== RESIZE HANDLE ===== */
+      .resize-handle {
+        width: 4px;
+        cursor: col-resize;
+        background: #333;
+        flex-shrink: 0;
+        transition: background 0.2s;
+      }
+      .resize-handle:hover { background: #555; }
+
+      /* ===== MAP PANEL ===== */
+      .map-container {
+        flex: 1;
+        position: relative;
+        overflow: hidden;
+        min-width: 0;
+      }
+      .map-container calcite-shell {
+        position: absolute;
+        inset: 0;
+      }
+
+      /* ===== LAYER TOGGLES ===== */
+      .layer-toggles {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        padding-right: 8px;
+      }
+
+      /* ===== LOADING BAR ===== */
+      .loading-bar {
+        height: 3px;
+        background: #333;
+        overflow: hidden;
+        flex-shrink: 0;
+      }
+      .loading-bar-inner {
+        height: 100%;
+        width: 40%;
+        background: #007bff;
+        animation: loading 1s ease-in-out infinite;
+      }
+      @keyframes loading {
+        0%   { transform: translateX(-100%); }
+        100% { transform: translateX(350%); }
+      }
+
+      /* ===== CHAT INPUT ===== */
+      #chatInput {
+        width: 100%;
+        background: #2a2a2a;
+        color: #e8e8e8;
+        border: 1px solid #444;
+        border-radius: 6px;
+        padding: 10px;
+        font-size: 14px;
+        font-family: inherit;
+        resize: vertical;
+      }
+      #chatInput:focus {
+        outline: none;
+        border-color: #007bff;
+      }
+      .btn {
+        padding: 6px 16px;
+        border: none;
+        border-radius: 4px;
+        font-size: 13px;
+        cursor: pointer;
+        font-family: inherit;
+      }
+      .btn-send {
+        background: #007bff;
+        color: #fff;
+      }
+      .btn-send:hover { background: #0069d9; }
+      .btn-send:disabled { opacity: 0.5; cursor: not-allowed; }
+      .btn-reset {
+        background: transparent;
+        color: #e55;
+        border: 1px solid #e55;
+      }
+      .btn-reset:hover { background: rgba(238,85,85,0.1); }
+
+      /* ===== WELCOME MESSAGE ===== */
+      .welcome-msg {
+        color: #888;
+        font-size: 13px;
+        text-align: center;
+        padding: 16px 8px;
+        line-height: 1.6;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="app-container">
+
+      <!-- ===== LEFT: CHAT PANEL ===== -->
+      <div class="chat-panel" id="chatPanel">
+
+        <div class="chat-header">
+          <calcite-navigation>
+            <calcite-navigation-logo
+              slot="logo"
+              heading="Nike Sports Agent"
+              description="Ask questions about stores, events &amp; athletes"
+            ></calcite-navigation-logo>
+            <calcite-action
+              slot="content-end"
+              icon="chevron-left"
+              text="Collapse"
+              id="collapseBtn"
+              scale="s"
+            ></calcite-action>
+          </calcite-navigation>
+        </div>
+
+        <div class="chat-body">
+          <div id="loadingBar" class="loading-bar" hidden><div class="loading-bar-inner"></div></div>
+
+          <div id="chatLog" class="chat-log">
+            <div class="welcome-msg">
+              Ask me anything about Nike stores, athletes, or sports events.<br/>
+              <em>Examples: "Which Nike athletes are in Europe?", "How many stores are in Japan?", "What events are in 2026?"</em>
+            </div>
+          </div>
+
+          <div class="chat-input-area">
+            <textarea
+              id="chatInput"
+              placeholder="Ask about Nike stores, events, or athletes..."
+              rows="3"
+            ></textarea>
+            <div class="chat-buttons">
+              <button id="resetBtn" class="btn btn-reset">Reset</button>
+              <button id="sendBtn" class="btn btn-send">Send</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== RESIZE HANDLE ===== -->
+      <div class="resize-handle" id="resizeHandle"></div>
+
+      <!-- ===== RIGHT: MAP PANEL ===== -->
+      <div class="map-container" id="mapContainer">
+        <calcite-shell>
+
+          <calcite-navigation slot="header">
+            <calcite-action
+              slot="content-start"
+              icon="chevron-right"
+              text="Show Chat"
+              id="expandBtn"
+              style="display:none;"
+              scale="s"
+            ></calcite-action>
+            <calcite-navigation-logo
+              slot="logo"
+              heading="Nike Sports Map"
+              description="Stores · Athletes · Events"
+            ></calcite-navigation-logo>
+
+            <div slot="content-end" class="layer-toggles">
+              <calcite-chip id="toggleStores" appearance="solid" scale="s" selected>
+                <calcite-icon icon="store" scale="xs" slot="image"></calcite-icon>
+                Nike Stores
+              </calcite-chip>
+              <calcite-chip id="toggleAgolEvents" appearance="solid" scale="s" selected>
+                <calcite-icon icon="calendar" scale="xs" slot="image"></calcite-icon>
+                Events (AGOL)
+              </calcite-chip>
+              <calcite-chip id="toggleAthletes" appearance="solid" scale="s" selected>
+                <calcite-icon icon="user" scale="xs" slot="image"></calcite-icon>
+                Athletes
+              </calcite-chip>
+              <calcite-chip id="toggleEventsCSV" appearance="solid" scale="s" selected>
+                <calcite-icon icon="pin-tear-f" scale="xs" slot="image"></calcite-icon>
+                Events (CSV)
+              </calcite-chip>
+            </div>
+          </calcite-navigation>
+
+          <div id="viewDiv" style="width:100%;height:100%;"></div>
+
+        </calcite-shell>
+      </div>
+
+    </div><!-- end .app-container -->
+
+    <script>
+      require([
+        "esri/config",
+        "esri/Map",
+        "esri/views/MapView",
+        "esri/layers/FeatureLayer",
+        "esri/layers/GraphicsLayer",
+        "esri/Graphic",
+        "esri/widgets/Search",
+        "esri/widgets/Home",
+        "esri/widgets/Expand",
+        "esri/widgets/BasemapGallery",
+        "esri/widgets/LayerList",
+        "esri/widgets/Legend",
+      ], async function(esriConfig, Map, MapView, FeatureLayer, GraphicsLayer, Graphic, Search, Home, Expand, BasemapGallery, LayerList, Legend) {
+
+      // ===== API KEY =====
+      esriConfig.apiKey = "AAPTxy8BH1VEsoebNVZXo8HurHudtAypLm328sIJojSUcoWK4iawKp87GbOMcJ3USNJwY4h0k2BHCncT8IVGuGRV6VRNlhVfLq-sg5Am5bj4jfN2ZZxE4NrzZ556QiIF9RHmOA9ObBSB9d7Pbe9MG37O4XpLZIiI1NK30OrO2rcp-t1G_Y4Edff7jUiOkLP2D53eyIJCQmBTOGEZMJKs8icrQE72y6HbRgoOPrXeUylo0rMc_RdL4f6iNrhtvzZL9tGoAT1_yJGuAnde";
+
+      // ===== CONFIG =====
+      const API_BASE = "http://localhost:8000";
+      let sessionId = crypto.randomUUID();
+
+      // ============================================================
+      // 1. NIKE STORES — FeatureLayer (purple circles)
+      // ============================================================
+      const storesLayer = new FeatureLayer({
+        url: "https://services2.arcgis.com/cPVqgcKAQtE6xCja/arcgis/rest/services/Nike_Story/FeatureServer/1",
+        title: "Nike Stores",
+        outFields: ["*"],
+        renderer: {
+          type: "simple",
+          symbol: {
+            type: "simple-marker",
+            color: [163, 0, 252],
+            outline: { color: [255, 255, 255, 0.6], width: 1 },
+            size: 8,
+          },
+        },
+        popupTemplate: {
+          title: "Nike Store: {FACILITY_NAME}",
+          content: [{ type: "fields" }],
+        },
+      });
+
+      // ============================================================
+      // 2. EVENTS (AGOL) — FeatureLayer (orange squares)
+      // ============================================================
+      const agolEventsLayer = new FeatureLayer({
+        url: "https://services2.arcgis.com/cPVqgcKAQtE6xCja/arcgis/rest/services/Nike_Story/FeatureServer/10",
+        title: "Events (AGOL)",
+        outFields: ["*"],
+        renderer: {
+          type: "simple",
+          symbol: {
+            type: "simple-marker",
+            style: "square",
+            color: [255, 140, 0],
+            outline: { color: [255, 255, 255, 0.6], width: 1 },
+            size: 10,
+          },
+        },
+        popupTemplate: {
+          title: "Event: {title}",
+          content: [{ type: "fields" }],
+        },
+      });
+
+      // ============================================================
+      // 3. ATHLETES CSV — GraphicsLayer (blue circles)
+      // ============================================================
+      const athleteLayer = new GraphicsLayer({ title: "Nike Athletes (CSV)" });
+
+      // ============================================================
+      // 4. EVENTS CSV — GraphicsLayer (red diamonds)
+      // ============================================================
+      const eventsCSVLayer = new GraphicsLayer({ title: "Sports Events (CSV)" });
+
+      // ============================================================
+      // CREATE MAP + VIEW (fully programmatic — no web components)
+      // ============================================================
+      const map = new Map({
+        basemap: "gray-vector",
+        layers: [storesLayer, agolEventsLayer, athleteLayer, eventsCSVLayer],
+      });
+
+      const view = new MapView({
+        container: "viewDiv",
+        map: map,
+        center: [-118.25, 34.05],
+        zoom: 10,
+      });
+
+      await view.when();
+      console.log("MapView ready — layers:", map.layers.length);
+
+      // ============================================================
+      // LOAD CSV DATA (athletes + events) from backend
+      // ============================================================
+      try {
+        const athletes = await fetch(`${API_BASE}/athletes`).then(r => r.json());
+        for (const a of athletes) {
+          athleteLayer.add(new Graphic({
+            geometry: { type: "point", latitude: Number(a.home_lat), longitude: Number(a.home_lon) },
+            attributes: a,
+            symbol: {
+              type: "simple-marker",
+              color: [0, 122, 255],
+              outline: { color: [255, 255, 255, 0.7], width: 1 },
+              size: 10,
+            },
+            popupTemplate: {
+              title: "{name}",
+              content:
+                "<b>Sport:</b> {sport}<br/>" +
+                "<b>Country:</b> {country}<br/>" +
+                "<b>Home City:</b> {home_city}<br/>" +
+                "<b>Team/Club:</b> {team_club}<br/>" +
+                "<b>Specialty:</b> {specialty}<br/>" +
+                "<b>Category:</b> {nike_category}",
+            },
+          }));
+        }
+      } catch (err) {
+        console.error("Failed to load athletes:", err);
+      }
+
+      try {
+        const events = await fetch(`${API_BASE}/events-csv`).then(r => r.json());
+        for (const e of events) {
+          eventsCSVLayer.add(new Graphic({
+            geometry: { type: "point", latitude: Number(e.lat), longitude: Number(e.lon) },
+            attributes: e,
+            symbol: {
+              type: "simple-marker",
+              style: "diamond",
+              color: [220, 50, 50],
+              outline: { color: [255, 255, 255, 0.7], width: 1 },
+              size: 12,
+            },
+            popupTemplate: {
+              title: "{event_name}",
+              content:
+                "<b>Sport:</b> {sport}<br/>" +
+                "<b>Dates:</b> {start_date} – {end_date}<br/>" +
+                "<b>City:</b> {city}, {country}<br/>" +
+                "<b>Venue:</b> {venue}<br/>" +
+                "<b>Region:</b> {region}<br/>" +
+                "<b>Description:</b> {description}",
+            },
+          }));
+        }
+      } catch (err) {
+        console.error("Failed to load events CSV:", err);
+      }
+
+      // ============================================================
+      // WIDGETS (all programmatic)
+      // ============================================================
+      const searchWidget = new Search({ view });
+      view.ui.add(new Expand({ view, content: searchWidget, expandIcon: "search", collapseIcon: "x", group: "g1" }), "top-left");
+
+      view.ui.add(new Home({ view }), "top-left");
+
+      const layerList = new LayerList({ view });
+      view.ui.add(new Expand({ view, content: layerList, expandIcon: "layers", collapseIcon: "x", group: "g1" }), "top-right");
+
+      const legend = new Legend({ view });
+      view.ui.add(new Expand({ view, content: legend, expandIcon: "legend", collapseIcon: "x", expanded: true }), "bottom-left");
+
+      const basemapGallery = new BasemapGallery({ view });
+      view.ui.add(new Expand({ view, content: basemapGallery, expandIcon: "basemap", collapseIcon: "x", group: "g1" }), "top-right");
+
+      // ============================================================
+      // LAYER TOGGLE CHIPS
+      // ============================================================
+      const toggles = {
+        toggleStores:     storesLayer,
+        toggleAgolEvents: agolEventsLayer,
+        toggleAthletes:   athleteLayer,
+        toggleEventsCSV:  eventsCSVLayer,
+      };
+
+      for (const [chipId, layer] of Object.entries(toggles)) {
+        const chip = document.getElementById(chipId);
+        chip.addEventListener("calciteChipSelect", () => {
+          layer.visible = chip.selected;
+        });
+      }
+
+      // ============================================================
+      // MAP CLICK → CHAT AGENT
+      // ============================================================
+      view.on("click", async (event) => {
+        const hit = await view.hitTest(event);
+        const results = hit.results.filter(r => r.graphic?.layer);
+        if (!results.length) return;
+
+        const graphic = results[0].graphic;
+        const layer   = graphic.layer;
+        const a       = graphic.attributes || {};
+
+        let message = "";
+
+        if (layer === storesLayer) {
+          const name    = a.FACILITY_NAME || a.Name || "this store";
+          const city    = a.CITY || a.City || "";
+          const country = a.COUNTRY || a.Country || "";
+          message = `Tell me more about the Nike store "${name}"${city ? " in " + city : ""}${country ? ", " + country : ""}.`;
+
+        } else if (layer === agolEventsLayer) {
+          const name = a.title || a.Name || "this event";
+          const city = a.locality || a.City || "";
+          message = `Tell me more about the event "${name}"${city ? " in " + city : ""}.`;
+
+        } else if (layer === athleteLayer) {
+          const name  = a.name || "this athlete";
+          const sport = a.sport || "";
+          message = `Tell me more about Nike athlete ${name}${sport ? " (" + sport + ")" : ""}.`;
+
+        } else if (layer === eventsCSVLayer) {
+          const name = a.event_name || "this event";
+          const city = a.city || "";
+          message = `Tell me more about the event "${name}"${city ? " in " + city : ""}.`;
+        }
+
+        if (message) {
+          chatInput.value = message;
+          sendMessage();
+        }
+      });
+
+      // ============================================================
+      // CHAT LOGIC
+      // ============================================================
+      const chatLog    = document.getElementById("chatLog");
+      const chatInput  = document.getElementById("chatInput");
+      const sendBtn    = document.getElementById("sendBtn");
+      const resetBtn   = document.getElementById("resetBtn");
+      const loadingBar = document.getElementById("loadingBar");
+
+      function appendMessage(role, text) {
+        const div = document.createElement("div");
+        div.className = `chat-message ${role}`;
+        div.innerHTML = marked.parse(text);
+        chatLog.appendChild(div);
+        chatLog.scrollTop = chatLog.scrollHeight;
+      }
+
+      async function sendMessage() {
+        const message = chatInput.value?.trim();
+        if (!message) return;
+
+        appendMessage("user", message);
+        chatInput.value = "";
+        loadingBar.hidden = false;
+        sendBtn.disabled = true;
+
+        try {
+          const resp = await fetch(`${API_BASE}/chat`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message, session_id: sessionId }),
+          });
+
+          if (!resp.ok) {
+            const err = await resp.json().catch(() => ({ detail: "Server error" }));
+            throw new Error(err.detail || "Server error");
+          }
+
+          const data = await resp.json();
+          if (data.session_id) sessionId = data.session_id;
+          appendMessage("assistant", data.reply);
+        } catch (err) {
+          appendMessage("assistant", `**Error:** ${err.message}`);
+        } finally {
+          loadingBar.hidden = true;
+          sendBtn.disabled = false;
+        }
+      }
+
+      sendBtn.addEventListener("click", sendMessage);
+
+      chatInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          sendMessage();
+        }
+      });
+
+      resetBtn.addEventListener("click", async () => {
+        await fetch(`${API_BASE}/reset`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ session_id: sessionId }),
+        }).catch(() => {});
+        sessionId = crypto.randomUUID();
+        chatLog.innerHTML = `
+          <div class="welcome-msg">
+            Chat reset. Ask me anything about Nike stores, athletes, or sports events.
+          </div>`;
+      });
+
+      // ============================================================
+      // PANEL COLLAPSE / EXPAND
+      // ============================================================
+      const chatPanel  = document.getElementById("chatPanel");
+      const collapseBtn = document.getElementById("collapseBtn");
+      const expandBtn   = document.getElementById("expandBtn");
+
+      collapseBtn.addEventListener("click", () => {
+        chatPanel.style.display = "none";
+        expandBtn.style.display = "block";
+      });
+
+      expandBtn.addEventListener("click", () => {
+        chatPanel.style.display = "flex";
+        expandBtn.style.display = "none";
+      });
+
+      // ============================================================
+      // RESIZE HANDLE (drag to resize chat panel)
+      // ============================================================
+      const resizeHandle = document.getElementById("resizeHandle");
+      let isResizing = false;
+
+      resizeHandle.addEventListener("mousedown", (e) => {
+        isResizing = true;
+        document.body.style.cursor = "col-resize";
+        document.body.style.userSelect = "none";
+      });
+
+      document.addEventListener("mousemove", (e) => {
+        if (!isResizing) return;
+        const newWidth = e.clientX;
+        if (newWidth >= 280 && newWidth <= 700) {
+          chatPanel.style.width = newWidth + "px";
+        }
+      });
+
+      document.addEventListener("mouseup", () => {
+        isResizing = false;
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+      });
+
+      }); // end require()
+    </script>
+  </body>
+</html>
