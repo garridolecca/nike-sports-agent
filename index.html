@@ -317,11 +317,13 @@
         "esri/widgets/Legend",
       ], async function(esriConfig, Map, MapView, FeatureLayer, GraphicsLayer, Graphic, Search, Home, Expand, BasemapGallery, LayerList, Legend) {
 
-      // ===== API KEY =====
-      esriConfig.apiKey = "AAPTxy8BH1VEsoebNVZXo8HurHudtAypLm328sIJojSUcoWK4iawKp87GbOMcJ3USNJwY4h0k2BHCncT8IVGuGRV6VRNlhVfLq-sg5Am5bj4jfN2ZZxE4NrzZ556QiIF9RHmOA9ObBSB9d7Pbe9MG37O4XpLZIiI1NK30OrO2rcp-t1G_Y4Edff7jUiOkLP2D53eyIJCQmBTOGEZMJKs8icrQE72y6HbRgoOPrXeUylo0rMc_RdL4f6iNrhtvzZL9tGoAT1_yJGuAnde";
-
       // ===== CONFIG =====
       const API_BASE = "http://localhost:8000";
+
+      // ===== API KEY (loaded from backend) =====
+      const cfgResp = await fetch(API_BASE + "/config");
+      const cfgData = await cfgResp.json();
+      esriConfig.apiKey = cfgData.arcgis_api_key;
       let sessionId = crypto.randomUUID();
 
       // ============================================================

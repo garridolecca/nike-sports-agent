@@ -127,6 +127,12 @@ async def reset_session(req: ResetRequest):
     return {"message": "Session cleared.", "session_id": req.session_id}
 
 
+@app.get("/config")
+async def config():
+    """Return non-secret frontend config (ArcGIS API key)."""
+    return {"arcgis_api_key": os.environ.get("ARCGIS_API_KEY", "")}
+
+
 @app.get("/health")
 async def health():
     return {
