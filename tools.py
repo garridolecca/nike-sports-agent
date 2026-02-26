@@ -6,6 +6,7 @@ Wraps ArcGIS Online feature layer queries and local CSV data.
 import os
 import json
 from pathlib import Path
+from functools import lru_cache
 
 import pandas as pd
 from dotenv import load_dotenv
@@ -178,10 +179,12 @@ def query_events_layer(
 # CSV TOOLS
 # =============================================================================
 
+@lru_cache(maxsize=1)
 def _load_athletes() -> pd.DataFrame:
     return pd.read_csv(ATHLETES_CSV)
 
 
+@lru_cache(maxsize=1)
 def _load_events() -> pd.DataFrame:
     return pd.read_csv(EVENTS_CSV)
 
