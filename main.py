@@ -22,6 +22,7 @@ load_dotenv()
 
 PORT = int(os.environ.get("PORT", 8000))
 TITLE = os.environ.get("APP_TITLE", "Nike Sports Agent")
+DEBUG = os.environ.get("DEBUG", "false").lower() == "true"
 
 # =============================================================================
 # STARTUP
@@ -40,6 +41,7 @@ app = FastAPI(
     title=TITLE,
     default_response_class=ORJSONResponse,
     lifespan=lifespan,
+    debug=DEBUG,
 )
 
 app.add_middleware(
@@ -148,4 +150,4 @@ async def health():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=PORT, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=PORT, reload=DEBUG)
