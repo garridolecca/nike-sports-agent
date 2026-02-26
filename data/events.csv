@@ -1,0 +1,3 @@
+event_name,sport,start_date,end_date,city,country,venue,lat,lon,region
+"World Cup 2026",Soccer,2026-06-11,2026-07-19,"Multiple Cities",USA,Various,39.8283,-98.5795,"North America"
+"Summer Olympics 2024",Multi-Sport,2024-07-26,2024-08-11,Paris,France,Various,48.8566,2.3522,Europe

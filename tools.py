@@ -30,8 +30,8 @@ EVENTS_AGOL_URL = (
 
 # CSV paths relative to this file's parent directory
 _BASE = Path(__file__).parent
-ATHLETES_CSV = _BASE / "../Gen_AI_Claude_sample/Nike_sample/data/athletes.csv"
-EVENTS_CSV   = _BASE / "../Gen_AI_Claude_sample/Nike_sample/data/events.csv"
+ATHLETES_CSV = Path(os.environ.get("ATHLETES_CSV_PATH", _BASE / "data/athletes.csv"))
+EVENTS_CSV   = Path(os.environ.get("EVENTS_CSV_PATH", _BASE / "data/events.csv"))
 
 
 # =============================================================================
