@@ -6,6 +6,7 @@ Wraps ArcGIS Online feature layer queries and local CSV data.
 import os
 import json
 from pathlib import Path
+from functools import lru_cache
 
 import pandas as pd
 from dotenv import load_dotenv
@@ -178,12 +179,20 @@ def query_events_layer(
 # CSV TOOLS
 # =============================================================================
 
-def _load_athletes() -> pd.DataFrame:
+@lru_cache(maxsize=1)
+def _load_athletes_cached() -> pd.DataFrame:
     return pd.read_csv(ATHLETES_CSV)
 
+def _load_athletes() -> pd.DataFrame:
+    return _load_athletes_cached().copy()
+
+
+@lru_cache(maxsize=1)
+def _load_events_cached() -> pd.DataFrame:
+    return pd.read_csv(EVENTS_CSV)
 
 def _load_events() -> pd.DataFrame:
-    return pd.read_csv(EVENTS_CSV)
+    return _load_events_cached().copy()
 
 
 @tool
@@ -252,13 +261,21 @@ def query_events_csv(
 # CSV DATA LOADERS (for FastAPI endpoints — not LangChain tools)
 # =============================================================================
 
-def load_athletes_json() -> list[dict]:
-    """Load athletes CSV and return as list of dicts (for /athletes endpoint)."""
-    df = _load_athletes()
+@lru_cache(maxsize=1)
+def _load_athletes_json_cached() -> list[dict]:
+    df = _load_athletes_cached()
     return df.to_dict(orient="records")
 
+def load_athletes_json() -> list[dict]:
+    """Load athletes CSV and return as list of dicts (for /athletes endpoint)."""
+    return [dict(d) for d in _load_athletes_json_cached()]
+
+
+@lru_cache(maxsize=1)
+def _load_events_json_cached() -> list[dict]:
+    df = _load_events_cached()
+    return df.to_dict(orient="records")
 
 def load_events_json() -> list[dict]:
     """Load events CSV and return as list of dicts (for /events-csv endpoint)."""
-    df = _load_events()
-    return df.to_dict(orient="records")
+    return [dict(d) for d in _load_events_json_cached()]
