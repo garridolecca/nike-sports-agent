@@ -1,0 +1,3 @@
+## 2025-02-28 - Caching Mutable Objects in Python
+**Learning:** When using `@lru_cache` to cache the results of parsing data into structures like Pandas DataFrames or lists of dictionaries, returning the cached object directly is highly dangerous in a web app context because the cached object is mutable. If any caller modifies the returned data, the cache itself is mutated for all future requests.
+**Action:** Always return a copy of the cached mutable object (e.g., `df.copy()` or `[dict(d) for d in cached_list]`) to ensure the cache remains pristine while still avoiding the expensive disk I/O or parsing step.
