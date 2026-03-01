@@ -1,0 +1,3 @@
+## 2026-03-01 - [Caching Mutable DataFrames]
+**Learning:** When caching mutable objects like Pandas DataFrames using `@lru_cache` in a web context, you must return a `.copy()` to prevent state mutation bugs across different API requests. A direct return from the cache will allow concurrent or subsequent requests to modify the underlying data if they do inplace changes.
+**Action:** Always return `.copy()` or `[dict(d) for d in cached_list]` when caching mutable structures to optimize repeated reads safely without risking shared state mutation.
